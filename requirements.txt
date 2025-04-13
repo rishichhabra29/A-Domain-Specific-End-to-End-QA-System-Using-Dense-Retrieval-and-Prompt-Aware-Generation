@@ -1,0 +1,12 @@
+torch>=1.12.0
+torchvision
+transformers>=4.36.0
+datasets>=2.14.0
+evaluate>=0.4.0
+scikit-learn
+numpy
+pandas
+tqdm
+streamlit
+sentencepiece 
+protobuf<4.0.0 
