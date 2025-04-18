@@ -2,7 +2,7 @@
 
 ## Abstract
 
-This project presents an end-to-end question answering (QA) system tailored to a specific domain (electronics product reviews). It combines a **dense retriever** (built on RoBERTa) with a **prompt-aware generator** (built on FLAN-T5) to answer user questions with high relevance and fluency. The retriever is fine-tuned using contrastive learning to fetch relevant review snippets, and the generator is fine-tuned with subjectivity-aware prompts (e.g. *“question: ... context: ...”*) to produce complete answers. We train and evaluate on the **SubjQA** dataset (electronics domain only), which focuses on subjective Q&A from customer reviews ([GitHub - megagonlabs/SubjQA: A question-answering dataset with a focus on subjective information](https://github.com/megagonlabs/SubjQA#:~:text=SubjQA%20is%20a%20question%20answering,high%20subjectivity)). Our system achieves strong results, with a BERTScore F1 of **81.29** and a CHRF++ score of **9.72** on the test set, demonstrating the effectiveness of domain-specific tuning and prompt design in QA.
+This project presents an end-to-end question answering (QA) system tailored to a specific domain (electronics product reviews). It combines a **dense retriever** (built on RoBERTa) with a **prompt-aware generator** (built on FLAN-T5) to answer user questions with high relevance and fluency. The retriever is fine-tuned using contrastive learning to fetch relevant review snippets, and the generator is fine-tuned with subjectivity-aware prompts (e.g. *“question: ... context: ...”*) to produce complete answers. We train and evaluate on the **SubjQA** dataset (electronics domain only), which focuses on subjective Q&A from customer reviews ([GitHub - megagonlabs/SubjQA: A question-answering dataset with a focus on subjective information](https://github.com/megagonlabs/SubjQA#:~:text=SubjQA%20is%20a%20question%20answering,high%20subjectivity)). Our system achieves strong results, with a BERTScore F1 of **81.29** on the test set, demonstrating the effectiveness of domain-specific tuning and prompt design in QA.
 
 ## Features
 
@@ -12,7 +12,7 @@ This project presents an end-to-end question answering (QA) system tailored to a
 - **Dynamic Hard Negatives:** During retriever training, negative examples are chosen **dynamically** by finding the most similar (yet incorrect) passages for each question on the fly. This hard negative sampling makes the retriever more robust by forcing it to discriminate against highly confusable passages.
 - **Prompt-Aware Generation:** The answer generator is built on a FLAN-T5 model and is fine-tuned with a consistent prompt format (`question: ... context: ...`). The prompt design is **subjectivity-aware** – it allows the model to handle subjective queries (asking for opinions or experiences) versus objective queries (factual details) appropriately, given that many questions in the data are subjective. 
 - **Training Optimizations:** The generator training uses **early stopping** (to avoid overfitting), **label masking** to ignore padded tokens in the loss, and applies a **repetition penalty** and **length penalty** during generation. These settings ensure the model generates concise, non-repetitive answers and stops when an answer is complete.
-- **Modern Evaluation Metrics:** Instead of only using traditional metrics like BLEU or ROUGE, we evaluate with **BERTScore** and **CHRF++**. BERTScore computes semantic similarity with pretrained language model embeddings, aligning better with human judgment on answer quality ([BERTScore in AI: Transforming Semantic Text Evaluation and Quality - Galileo AI](https://www.galileo.ai/blog/bert-score-explained-guide#:~:text=For%20example%2C%20models%20like%20BLEU,contextual%20understanding%20of%20the%20source)) ([BERTScore in AI: Transforming Semantic Text Evaluation and Quality - Galileo AI](https://www.galileo.ai/blog/bert-score-explained-guide#:~:text=,to%20a%20study)). CHRF++ computes F-score over character n-grams (with bonus for word n-gram matches), giving partial credit for lexical similarity even when wording differs ([chrF - a Hugging Face Space by evaluate-metric](https://huggingface.co/spaces/evaluate-metric/chrf#:~:text=chrF%20,grams%20as%20well%20which)).
+- **Modern Evaluation Metrics:** Instead of only using traditional metrics like BLEU or ROUGE, we evaluate with **BERTScore**. BERTScore computes semantic similarity with pretrained language model embeddings, aligning better with human judgment on answer quality ([BERTScore in AI: Transforming Semantic Text Evaluation and Quality - Galileo AI](https://www.galileo.ai/blog/bert-score-explained-guide#:~:text=For%20example%2C%20models%20like%20BLEU,contextual%20understanding%20of%20the%20source)).
 - **Modular Design:** The retriever and generator are decoupled modules. This modularity makes it easy to swap components (e.g., use a BM25 retriever as a baseline or upgrade the generator model) and to debug or test each part independently (we include separate test scripts for each). The components integrate into a unified pipeline for inference, but can be maintained and improved in isolation.
 
 ## Dataset
@@ -200,7 +200,7 @@ We evaluate our QA system on the held-out **test set** of the electronics QA dat
 1. **Data Preparation:** Ensure you have `subjectqa_test.csv` (created by our preprocessing or provided). This contains test questions, their ground truth answers, and possibly the original context (which we don't use for retrieval, to simulate real-world scenario).
 2. **Retrieval and Generation:** For each question in the test set, we use the trained retriever to get the top 3 passages from the full corpus of training+val+test reviews (excluding duplicates). Then we feed the question with each of these passages into the generator to produce candidate answers.
 3. **Selecting Final Answer:** In our evaluation, we simply take the answer generated from the top-1 passage as the final answer. We found that in most cases the top passage contains the correct answer. (If it didn’t, often the question was truly unanswerable or the model might generate something irrelevant – which would be penalized by the metrics.)
-4. **Metrics Calculation:** We compute two metrics: **BERTScore** (using the English BERT base model for embeddings) and **ChrF++**. We use the `evaluate` library, which handles the heavy lifting. BERTScore is reported as a precision, recall, and F1; we focus on **F1** as is standard ([BERTScore in AI: Transforming Semantic Text Evaluation and Quality - Galileo AI](https://www.galileo.ai/blog/bert-score-explained-guide#:~:text=would%20capture%20nuanced%20meaning%20similarities,provides%20more%20accurate%20evaluations%20than)). ChrF++ gives a single score (we interpret it similar to BLEU – higher is better).
+4. **Metrics Calculation:** We compute two metrics: **BERTScore** (using the English BERT base model for embeddings). We use the `evaluate` library, which handles the heavy lifting. BERTScore is reported as a precision, recall, and F1; we focus on **F1** as is standard ([BERTScore in AI: Transforming Semantic Text Evaluation and Quality - Galileo AI](https://www.galileo.ai/blog/bert-score-explained-guide#:~:text=would%20capture%20nuanced%20meaning%20similarities,provides%20more%20accurate%20evaluations%20than)).
 
 To run evaluation, execute:
 
@@ -212,42 +212,40 @@ This will load the models, run through all test questions, and print out the ave
 
 ```
 BERTScore (P, R, F1): 0.8125, 0.8134, 0.8129
-ChrF++: 9.72
 ```
 
-We then report the BERTScore F1 as 81.29 and ChrF++ as 9.72 (sometimes as a percentage). The script might also output intermediate info, like the retrieval encoding progress, etc. These final numbers match the ones given above in the Features and Abstract.
+We then report the BERTScore F1 as 81.29 (sometimes as a percentage). The script might also output intermediate info, like the retrieval encoding progress, etc. These final numbers match the ones given above in the Features and Abstract.
 
 ### Understanding the Metrics
 
 - **BERTScore F1 = 81.29:** Indicates a high semantic similarity between generated answers and ground truths. This is a strong score, especially for subjective QA.
-- **CHRF++ = 9.72:** This score is relatively low, which is expected. CHRF++ is sensitive to exact character/word overlap, and your model is likely paraphrasing or summarizing rather than matching word-for-word. This is not a concern if your model is generating fluent and meaningful answers
+-  This score is relatively low, which is expected.
 
-We deliberately did **not** rely on ROUGE or BLEU in our evaluation, because for QA (especially subjective QA), there may be many valid expressions for the answer. Traditional n-gram metrics like BLEU/ROUGE often fail to credit semantically correct answers that use different wording ([BERTScore in AI: Transforming Semantic Text Evaluation and Quality - Galileo AI](https://www.galileo.ai/blog/bert-score-explained-guide#:~:text=For%20example%2C%20models%20like%20BLEU,contextual%20understanding%20of%20the%20source)). For example, if the reference answer is "Absolutely, the battery lasts long enough for a full day." and the model says "Yes, the battery can easily run for an entire day of use.", ROUGE/BLEU might be low due to few exact matches, but BERTScore will be high since the meaning is the same. Our use of BERTScore ensures we measure what matters – the answer’s correctness – and CHRF++ gives another perspective on literal overlap.
+We deliberately did **not** rely on ROUGE or BLEU in our evaluation, because for QA (especially subjective QA), there may be many valid expressions for the answer. Traditional n-gram metrics like BLEU/ROUGE often fail to credit semantically correct answers that use different wording ([BERTScore in AI: Transforming Semantic Text Evaluation and Quality - Galileo AI](https://www.galileo.ai/blog/bert-score-explained-guide#:~:text=For%20example%2C%20models%20like%20BLEU,contextual%20understanding%20of%20the%20source)). For example, if the reference answer is "Absolutely, the battery lasts long enough for a full day." and the model says "Yes, the battery can easily run for an entire day of use.", ROUGE/BLEU might be low due to few exact matches, but BERTScore will be high since the meaning is the same. Our use of BERTScore ensures we measure what matters – the answer’s correctness – and gives another perspective on literal overlap.
 
-*(For completeness, one could also include metrics like METEOR, BLEURT, or even human evaluation for a comprehensive assessment. In this project, we focus on BERTScore and CHRF++ as state-of-the-art automated metrics.)*
+*(For completeness, one could also include metrics like METEOR, BLEURT, or even human evaluation for a comprehensive assessment. In this project, we focus on BERTScore  as state-of-the-art automated metrics.)*
 
 ## Results
 
 On the electronics domain test set of SubjQA, our end-to-end system achieves the following overall results:
 
 - **BERTScore F1:** **81.29** (precision 81.25, recall 81.34) – indicating a high semantic similarity between generated answers and reference answers.
-- **CHRF++ score:** **9.72** – indicating some overlap at character/word level, though the score is low due to phrasing differences.
 
-These results suggest that the model-generated answers are usually correct in content (as evidenced by BERTScore) even if not verbatim (hence lower CHRF++). Given the subjective nature of many questions, exact wording match is often impossible, so a high BERTScore is more reassuring. 
+These results suggest that the model-generated answers are usually correct in content (as evidenced by BERTScore) even if not verbatim. Given the subjective nature of many questions, exact wording match is often impossible, so a high BERTScore is more reassuring. 
 
 To illustrate the performance, here are a few examples from the test set:
 - **Q:** "Is the audio quality good?"  
   **A (model):** "Yes, the sound quality is very good for the price."  
   **Ref:** "The audio quality is great."  
-  *(BERTScore ~0.85, CHRF++ ~15)* – The model captured the essence.
+  *(BERTScore ~0.85)* – The model captured the essence.
 - **Q:** "How long does it take to charge?"  
   **A (model):** "It charges from empty to about 80% in 30 minutes, which is very fast."  
   **Ref:** "Very fast charging – 0 to 80% in under 30 minutes."  
-  *(BERTScore high, CHRF++ moderate)* – Model matched the detail.
+  *(BERTScore high)* – Model matched the detail.
 - **Q:** "Is this laptop heavy?"  
   **A (model):** "No, it’s quite lightweight and portable."  
   **Ref:** "It’s not heavy at all."  
-  *(Both metrics fairly high)*.
+  *(metrics fairly high)*.
 
 Qualitatively, the system handles **subjective questions** well, often rephrasing review opinions as answers. For instance, if a review says "The keyboard feels great to type on," and the question asks about keyboard comfort, the generator might answer "Yes, the keyboard is very comfortable to use." This is a coherent, complete answer that goes beyond just excerpting the review text – it frames it as an answer to the question, which is what we wanted.
 
@@ -284,7 +282,7 @@ There are several directions in which this project can be extended and improved:
 - **Joint Retriever-Reader Training:** Currently the retriever and generator are trained independently. An advanced direction is to fine-tune them in tandem, e.g., using a reinforcement learning or cross-entropy signal from the generator back to the retriever (so the retriever learns to fetch passages that lead to better final answers). This is complex but could squeeze out more performance. Alternatively, we could use the generator to re-rank or filter the retrieved passages (by scoring which passage yields the best answer).
 - **Incorporate Multiple Passages:** Our generator currently reads one passage at a time. In cases where relevant information is scattered across multiple reviews, the answer might require combining facts or opinions. Future work can feed the top N passages concatenated (with separators) into the generator to allow a single answer that synthesizes multiple sources. This would move the system more towards a **RAG (Retrieval-Augmented Generation)** setup where generation attends to several documents at once.
 - **Interactive and Continuous Learning:** Deploy the system in an interactive setting (e.g., a customer support chatbot for electronics). Gather user feedback on answers – was the answer helpful, correct, subjective enough? – and use that feedback to further fine-tune the models. Especially for subjective answers, human feedback could help refine the tone and usefulness of responses.
-- **Additional Evaluation Metrics:** We’d like to evaluate with human judgments to ensure that our automated metrics correlate well. Also, metrics like **BLEURT** or **COMET (for MT)** could be tried as they use neural networks to judge text similarity and might capture nuances better than CHRF++. However, BERTScore already covers a lot of that ground.
+- **Additional Evaluation Metrics:** We’d like to evaluate with human judgments to ensure that our automated metrics correlate well. Also, metrics like **BLEURT** or **COMET (for MT)** could be tried as they use neural networks to judge text similarity. However, BERTScore already covers a lot of that ground.
 - **Knowledge Update and Adaptation:** As product reviews get updated or new products come in, the system should be able to update its knowledge base (the set of context passages). Using an index like FAISS for passage embeddings would allow adding/deleting passages without retraining the model (just re-embed new passages with the same encoder). Investigating how the system adapts to evolving data (especially for factual questions like prices, specs that can change) would be useful.
 - **Error Analysis & Model Bias:** Conduct a thorough error analysis to see where the model fails. Perhaps it struggles with questions that use uncommon phrasing, or with contexts that are too short/long. We also want to ensure the model isn’t outputting inappropriate content or inheriting biases from reviews (e.g., overly negative or subjective language when not appropriate). Future work could include a moderation step or a style adjustment to ensure answers are polite and useful.
 
